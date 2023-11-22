@@ -1,0 +1,284 @@
+---
+title: "Student Personas"
+output: html_notebook
+---
+
+## Section 1: Data Exploration
+
+``` {R}
+data <- read.csv("/Users/isenkasa/dev/school/machine-learning/final-project/personas.csv")
+summary(data)
+str(data)
+```
+
+### Feature description
+**Program** - Student’s declared degree pathway - Categorical 
+
+**College** - The college division the student’s degree belongs to - Categorical
+
+**Age** - The students age - Numerical
+
+**Gender** - The students gender - Categorical
+
+**FirstGen** - Indicates if the student is a first-generation college student in their family - Categorical
+
+**Race** - The student’s ethnicity ('Hispanic/Latino' or other specified race) - Categorical
+
+**TSI_MATH** - The student’s Texas Success Initiative Assessment score for Math - Numerical
+
+**TSI_WRITING** - The student’s Texas Success Initiative Assessment score for Writing - Numerical
+
+**TSI_READING** - The student’s Texas Success Initiative Assessment score for Reading - Numerical
+
+**MotherEducation** - The highest level of education the student’s mother has attained - Categorical
+
+**FatherEducation** - The highest level of education the student’s father has attained - Categorical
+
+**Homeschooled** - Indicates if the student was homeschooled - Categorical **(0 - No, 1 - Yes)**
+
+**HasGED** - Indicates if the student has their GED - Categorical **(0 - No, 1 - Yes)**
+
+**Highschool** - The high school the student attended - Categorical
+
+**FinAid** - The type of financial aid the student qualified for ('Other' or 'Fed Pell Grant') - Categorical
+
+**EFC** - The Expected Family Contribution financially - Numerical
+
+### Data exploration
+``` {R}
+# Age
+ggplot(data, aes(x = Age)) +
+  geom_histogram(bins = 30, fill = "blue", color = "black") +
+  labs(title = "Histogram of Age", x = "Age", y = "Count")
+
+# Homeschooled
+ggplot(data, aes(x = factor(Homeschooled))) +
+  geom_bar(fill = "green") +
+  labs(title = "Bar Plot of Homeschooled", x = "Homeschooled", y = "Count")
+
+# HasGED
+ggplot(data, aes(x = factor(HasGED))) +
+  geom_bar(fill = "green") +
+  labs(title = "Bar Plot of HasGED", x = "HasGED", y = "Count")
+
+# Program
+ggplot(data, aes(x = Program)) +
+  geom_bar(fill = "red") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Bar Plot of Program", x = "Program", y = "Count")
+
+# College
+ggplot(data, aes(x = College)) +
+  geom_bar(fill = "red") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Bar Plot of College", x = "College", y = "Count")
+
+# Gender
+ggplot(data, aes(x = Gender)) +
+  geom_bar(fill = "red") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Bar Plot of Gender", x = "Gender", y = "Count")
+
+# FirstGen
+ggplot(data, aes(x = FirstGen)) +
+  geom_bar(fill = "red") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Bar Plot of FirstGen", x = "FirstGen", y = "Count")
+
+# Race
+ggplot(data, aes(x = Race)) +
+  geom_bar(fill = "red") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Bar Plot of Race", x = "Race", y = "Count")
+
+# TSI_MATH
+ggplot(data, aes(x = TSI_MATH)) +
+  geom_density(fill = "orange") +
+  labs(title = "Density Plot of TSI_MATH", x = "TSI_MATH", y = "Density")
+
+# TSI_WRITING
+ggplot(data, aes(x = TSI_WRITING)) +
+  geom_density(fill = "orange") +
+  labs(title = "Density Plot of TSI_WRITING", x = "TSI_WRITING", y = "Density")
+
+# TSI_READING
+ggplot(data, aes(x = TSI_READING)) +
+  geom_density(fill = "orange") +
+  labs(title = "Density Plot of TSI_READING", x = "TSI_READING", y = "Density")
+
+# MotherEducation
+ggplot(data, aes(x = MotherEducation)) +
+  geom_bar(fill = "red") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Bar Plot of MotherEducation", x = "MotherEducation", y = "Count")
+
+# FatherEducation
+ggplot(data, aes(x = FatherEducation)) +
+  geom_bar(fill = "red") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Bar Plot of FatherEducation", x = "FatherEducation", y = "Count")
+
+# Highschool
+ggplot(data, aes(x = Highschool)) +
+  geom_density(fill = "orange") +
+  labs(title = "Density Plot of Highschool", x = "Highschool", y = "Density")
+
+# FinAid
+ggplot(data, aes(x = FinAid)) +
+  geom_bar(fill = "red") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Bar Plot of FinAid", x = "FinAid", y = "Count")
+
+# EFC
+ggplot(data, aes(x = EFC)) +
+  geom_density(fill = "orange") +
+  labs(title = "Density Plot of EFC", x = "EFC", y = "Density")
+
+```
+
+The following variables are High Cardinality Variables since they contain a large amount of distinct values. Top n frequent values helps to better visualize these.
+
+``` {R}
+# Function to display top n frequent values
+top_n_frequent <- function(data, variable, n = 10) {
+  freq <- as.data.frame(table(data[[variable]]))
+  names(freq) <- c("Value", "Frequency")
+  freq <- freq[order(-freq$Frequency), ]
+  head(freq, n)
+}
+# TSI_MATH
+top_n_frequent(data, "TSI_MATH")
+# TSI_WRITING
+top_n_frequent(data, "TSI_WRITING")
+# TSI_READING
+top_n_frequent(data, "TSI_READING")
+# Highschool
+top_n_frequent(data, "Highschool")
+# EFC
+top_n_frequent(data, "EFC")
+```
+### Observations
+- There is a very small amount of students that have been Homeschooled. HasGED is very similar, although there are more 'Yes' values.
+- There are missing values, labeled as "Unknown" for some of the features. The variables that have a high "Unknown" value are FirstGen, MotherEducation, FatherEducation.
+- The following variables have a high amount of NULL values - TSI_MATH, TSI_WRITING, TSI_READING
+
+### Data cleaning and preparation
+
+We will leave "Unkown" to be a separate category for variables such as FirstGen, MotherEducation, FatherEducation, Gender since they represent a large portion of the dataset. It could be renamed to "Other" to better reflect the third category.
+
+We can assume that NULLS for TSI exams represent students that have not taken the exam. We can replace NULL with 0.
+
+``` {R}
+# Replace "NULL" with 0 for TSI variables
+data$TSI_MATH[data$TSI_MATH == "NULL"] <- 0
+data$TSI_WRITING[data$TSI_WRITING == "NULL"] <- 0
+data$TSI_READING[data$TSI_READING == "NULL"] <- 0
+```
+
+``` {R}
+# TSI_MATH
+top_n_frequent(data, "TSI_MATH")
+# TSI_WRITING
+top_n_frequent(data, "TSI_WRITING")
+# TSI_READING
+top_n_frequent(data, "TSI_READING")
+```
+The TSI variables contain scores from two versions of the TSI exams. The original TSI exam scores were less than 400. The new TSI exam scores are greater than 900. We will replace the values in those variables with 0 for "Developmental Courses Needed" or 1 for "Ready For College Courses"
+
+``` {R}
+# Function to convert values based on the specified condition
+convert_to_binary <- function(x) {
+  as.integer(x < 350 | (x > 400 & x < 950))
+}
+
+# Apply the function to the specified columns
+data$TSI_MATH <- convert_to_binary(as.numeric(data$TSI_MATH))
+data$TSI_WRITING <- convert_to_binary(as.numeric(data$TSI_WRITING))
+data$TSI_READING <- convert_to_binary(as.numeric(data$TSI_READING))
+```
+
+``` {R}
+# TSI_MATH
+top_n_frequent(data, "TSI_MATH")
+# TSI_WRITING
+top_n_frequent(data, "TSI_WRITING")
+# TSI_READING
+top_n_frequent(data, "TSI_READING")
+```
+
+``` {R}
+library(dplyr)
+library(tidyr)
+
+# Converting ordinal variables to numeric
+data <- data %>% 
+  mutate(
+    MotherEducation = case_when(
+      MotherEducation == "Associate Degree" ~ 1,
+      MotherEducation == "Bachelor/Four-year Degree" ~ 2,
+      MotherEducation == "Graduate/Professional Degree" ~ 3,
+      MotherEducation == "High School Diploma or GED" ~ 4,
+      MotherEducation == "No High School" ~ 5,
+      MotherEducation == "Some College" ~ 6,
+      MotherEducation == "Some High School" ~ 7,
+      MotherEducation == "Unknown" ~ 8
+    ),
+    FatherEducation = case_when(
+      FatherEducation == "Associate Degree" ~ 1,
+      FatherEducation == "Bachelor/Four-year Degree" ~ 2,
+      FatherEducation == "Graduate/Professional Degree" ~ 3,
+      FatherEducation == "High School Diploma or GED" ~ 4,
+      FatherEducation == "No High School" ~ 5,
+      FatherEducation == "Some College" ~ 6,
+      FatherEducation == "Some High School" ~ 7,
+      FatherEducation == "Unknown" ~ 8
+    ),
+    FirstGen = case_when(
+      FirstGen == "Unknown" ~ 3,
+      FirstGen == "Yes" ~ 1,
+      FirstGen == "No" ~ 0
+    )
+  )
+
+# Handling binary variables
+data$Homeschooled <- as.numeric(data$Homeschooled)
+data$HasGED <- as.numeric(data$HasGED)
+
+# Since there are many different high schools, we take into account the top 10 and then use a separate "Other" category for the other ones
+# Calculate the top 10 most common high schools
+top_schools <- data %>%
+  count(Highschool, sort = TRUE) %>%
+  top_n(10, n) %>%
+  pull(Highschool)
+
+# Replace less common high schools with 'Other'
+data <- data %>%
+  mutate(Highschool = ifelse(Highschool %in% top_schools, Highschool, "Other"))
+```
+
+``` {R}
+str(data)
+```
+``` {R}
+library(data.table)
+library(mltools)
+
+# One hot encoding variables
+data_dt <- as.data.table(data)
+cols_to_encode <- c("Program", "College", "Gender", "Race", "Highschool", "FinAid")
+data_dt[, (cols_to_encode) := lapply(.SD, as.factor), .SDcols = cols_to_encode]
+data_encoded <- one_hot(data_dt, dropUnusedLevels = TRUE)
+data_encoded_df <- as.data.frame(data_encoded)
+```
+
+``` {R}
+# Finally, converting EFC to numeric
+data_encoded_df$EFC <- as.numeric(data_encoded_df$EFC)
+```
+
+``` {R}
+str(data_encoded_df)
+```
+
+
+
