@@ -1,12 +1,20 @@
 ---
 title: "Student Personas"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ## Section 1: Data Exploration
 
 ``` {R}
-data <- read.csv("/Users/isenkasa/dev/school/machine-learning/final-project/personas.csv")
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(cluster)
+library(factoextra)
+data <- read.csv("personas.csv")
 summary(data)
 str(data)
 ```
@@ -269,16 +277,149 @@ cols_to_encode <- c("Program", "College", "Gender", "Race", "Highschool", "FinAi
 data_dt[, (cols_to_encode) := lapply(.SD, as.factor), .SDcols = cols_to_encode]
 data_encoded <- one_hot(data_dt, dropUnusedLevels = TRUE)
 data_encoded_df <- as.data.frame(data_encoded)
+
+# Create a list to hold mapping for each categorical variable
+mapping_list <- lapply(cols_to_encode, function(col) {
+  # Get the unique levels for the categorical variable
+  levels <- unique(data_dt[[col]])
+  
+  # Ensure consistent column names across all data frames
+  mapping_df <- data.frame(
+    original_value = levels,
+    encoded_column = paste0(col, "_", as.character(levels))
+  )
+  
+  return(mapping_df)
+})
+
+# Combine all the mappings into a single data frame
+mapping_table <- do.call(rbind, mapping_list)
 ```
 
 ``` {R}
-# Finally, converting EFC to numeric
+# Find the median of the EFC values excluding the non-numeric entries
+good_numeric_efc <- as.numeric(data$EFC[grepl("^[0-9]+$", data$EFC)])
+median_efc <- median(good_numeric_efc, na.rm = TRUE)
+
+# Replace non-numeric values with NA (to be replaced with the median later)
+data$EFC <- as.numeric(data$EFC)
+data$EFC[!grepl("^[0-9]+$", data$EFC)] <- NA
+
+# Replace NA values with the median
+data$EFC[is.na(data$EFC)] <- median_efc
+
+# Apply the same conversion to the encoded data frame
 data_encoded_df$EFC <- as.numeric(data_encoded_df$EFC)
+data_encoded_df$EFC[is.na(data_encoded_df$EFC)] <- median_efc
+
 ```
 
 ``` {R}
 str(data_encoded_df)
 ```
 
+To minimize dimensionality, apply Principal Component Analysis (PCA)
 
+```{r}
 
+# Standardize the data (giving it a mean of 0 and a standard deviation of 1) by applying scale to the encoded data
+data_scaled <- scale(data_encoded_df)
+
+# Perform PCA 
+pca_result <- prcomp(data_scaled, center = TRUE, scale. = TRUE)
+
+# Examine the summary to determine the number of principal components
+summary(pca_result)
+plot(pca_result, type = "lines")
+
+```
+
+Given the scree plot and the summary results:  
+
+- The first component explains approximately 4% of the variance, and each subsequent component explains slightly less.  
+- The cumulative proportion of variance explained by the first 10 components is around 26%.  
+- The 'elbow' in the scree plot appears around the 4th or 5th component, indicating that additional components provide diminishing returns on variance explained.  
+
+Based on these observations, let's start with the first 5 components for clustering.  
+
+```{r}
+# PCA based dataset with the first five components
+pca_data <- pca_result$x[, 1:5]
+
+```
+
+Apply K-Means clustering model on PCA reduced data
+
+```{r}
+
+# Determine the number of clusters using the Elbow Method
+fviz_nbclust(pca_data, kmeans, method = "wss") + geom_vline(xintercept = 4, linetype = 2)
+
+```
+
+Based on the chart, we'll start with four clusters.
+
+```{r}
+# Convert pca_data to a dataframe
+pca_data <- as.data.frame(pca_result$x[, 1:5])
+
+# Properly name the columns to reflect that they are principal components
+colnames(pca_data) <- c("PC1", "PC2", "PC3", "PC4", "PC5")
+
+# Perform K-means clustering
+set.seed(123)
+kmeans_result <- kmeans(pca_data, centers = 4)
+
+# Add the cluster assignments to the PCA data
+pca_data$cluster <- kmeans_result$cluster
+
+# Visualize the clusters with a scatter plot for the first two principal components
+library(ggplot2)
+ggplot(pca_data, aes(PC1, PC2, color = as.factor(cluster))) +
+  geom_point(alpha = 0.5) +
+  labs(color = 'Cluster') +
+  theme_minimal()
+
+```
+
+We now need to interpret the results.
+
+```{r}
+# Define the Mode function
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+# Add cluster assignments to the original data
+data$cluster <- kmeans_result$cluster
+
+# Decoding the one-hot encoded variables
+decoded_clusters <- lapply(1:max(data$cluster), function(cluster_number) {
+  cluster_data <- data[data$cluster == cluster_number, ]
+  sapply(cols_to_encode, function(col) {
+    # Filter original values that are present in the cluster data
+    # original_values <- cluster_data[col]
+    # Return the mode of the original values
+    Mode(cluster_data[[col]])
+  })
+})
+
+# Convert the list to a dataframe for easier viewing
+decoded_cluster_modes <- do.call(rbind, decoded_clusters)
+
+# Assign column names to match the original categorical variables
+colnames(decoded_cluster_modes) <- cols_to_encode
+
+# `decoded_cluster_modes` will give the most frequent original values of the categorical variables for each cluster
+print(decoded_cluster_modes)
+
+```
+
+***Cluster 1:*** This cluster is characterized mostly by individuals in the Business Administration program from the Business college. The majority are female and identify as Hispanic/Latino. The most common high school is MISD- LHS, and the financial aid category is 'OTHER'.
+
+***Cluster 2:*** Members of this cluster are predominantly in the Engineering program, associated with the Career and Technical college. They are mostly male and also identify as Hispanic/Latino. Like Cluster 1, the most common high school is MISD- LHS, and the financial aid category is 'OTHER'.
+
+***Cluster 3:*** This cluster primarily consists of individuals in the Nursing-Vocational program from the Health Science college. They are mostly female, identify as Hispanic/Latino, but unlike the first two clusters, the most common high school category is 'Other', indicating a more diverse background in terms of high schools. The financial aid category is also 'OTHER'.
+
+***Cluster 4:*** Similar to Cluster 3, this cluster is characterized by individuals predominantly from the Career and Technical college and in the Education program. The majority are female and identify as Hispanic/Latino, with a high school category of 'Other', and financial aid category as 'OTHER'.
