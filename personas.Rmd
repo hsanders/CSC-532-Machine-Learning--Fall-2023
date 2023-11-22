@@ -380,6 +380,10 @@ ggplot(pca_data, aes(PC1, PC2, color = as.factor(cluster))) +
   labs(color = 'Cluster') +
   theme_minimal()
 
+# Visualize clustering in 3D using the first three principal components
+library(rgl)
+plot3d(pca_data$PC1, pca_data$PC2, pca_data$PC3, col = kmeans_result$cluster)
+
 ```
 
 We now need to interpret the results.
